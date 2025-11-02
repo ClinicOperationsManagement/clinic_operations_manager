@@ -45,6 +45,7 @@ app.use('/api/treatments', treatmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
