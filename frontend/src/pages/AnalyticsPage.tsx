@@ -3,31 +3,36 @@ import {
   Box,
   Typography,
   Grid,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
   ToggleButtonGroup,
   ToggleButton,
+  Button,
+  ButtonGroup,
+  Chip,
   useTheme,
+  alpha,
 } from '@mui/material';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Timeline as TimelineIcon,
+  PieChart as PieChartIcon,
+  BarChart as BarChartIcon,
+  CalendarToday as CalendarIcon,
+  Download as DownloadIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import { analyticsService } from '../services/analytics.service';
 import { useAuth } from '../context/AuthContext';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B'];
+import EnhancedPieChart from '../components/charts/EnhancedPieChart';
+import InteractiveBarChart from '../components/charts/InteractiveBarChart';
+import TrendLineChart from '../components/charts/TrendLineChart';
+import RealtimeDashboard from '../components/charts/RealtimeDashboard';
+import AnimatedContainer from '../components/common/AnimatedContainer';
+import EnhancedCard from '../components/common/EnhancedCard';
+import { LoadingStates } from '../components/common/LoadingStates';
 
 const AnalyticsPage: React.FC = () => {
   const { user } = useAuth();
