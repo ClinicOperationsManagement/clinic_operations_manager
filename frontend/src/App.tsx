@@ -12,6 +12,7 @@ import PatientDetailPage from './pages/PatientDetailPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import TreatmentsPage from './pages/TreatmentsPage';
 import InvoicesPage from './pages/InvoicesPage';
+import InventoryPage from './pages/InventoryPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
