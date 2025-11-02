@@ -26,6 +26,7 @@ import {
   LocalHospital as TreatmentIcon,
   Receipt as ReceiptIcon,
   Analytics as AnalyticsIcon,
+  Inventory as InventoryIcon,
   ManageAccounts as ManageAccountsIcon,
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
