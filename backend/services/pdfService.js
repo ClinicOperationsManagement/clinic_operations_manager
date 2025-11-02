@@ -1,24 +1,28 @@
 const PDFDocument = require('pdfkit');
 
-/**
- * Generate invoice PDF
- */
 const generateInvoicePDF = (invoice, res) => {
+  // ✅ Proper response headers
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename=invoice-${invoice.invoiceNumber || invoice._id}.pdf`
+  );
+
   const doc = new PDFDocument({ margin: 50 });
 
-  // Pipe PDF to response
+  // Stream PDF to response
   doc.pipe(res);
 
-  // Clinic header
+  // Clinic Header
   doc
     .fontSize(20)
     .text(process.env.CLINIC_NAME || 'Dental Clinic', 50, 50)
     .fontSize(10)
-    .text(process.env.CLINIC_ADDRESS || '', 50, 75)
-    .text(process.env.CLINIC_PHONE || '', 50, 90)
+    .text(process.env.CLINIC_ADDRESS || '123 Main Street, City', 50, 75)
+    .text(process.env.CLINIC_PHONE || 'Phone: +91 9876543210', 50, 90)
     .moveDown();
 
-  // Invoice title
+  // Invoice Title & Metadata
   doc
     .fontSize(20)
     .text('INVOICE', 50, 140)
@@ -30,90 +34,83 @@ const generateInvoicePDF = (invoice, res) => {
     doc.text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}`, 50, 200);
   }
 
-  // Patient info
+  // Patient Info
   doc
     .fontSize(12)
     .text('Bill To:', 50, 230)
     .fontSize(10)
-    .text(invoice.patientId.name, 50, 245)
-    .text(invoice.patientId.contact, 50, 260);
+    .text(invoice.patientId?.name || '', 50, 245)
+    .text(invoice.patientId?.contact || '', 50, 260);
 
-  if (invoice.patientId.email) {
+  if (invoice.patientId?.email) {
     doc.text(invoice.patientId.email, 50, 275);
   }
 
-  // Treatments table
-  doc.moveDown(2);
+  // Table Header
   const tableTop = 320;
-
-  // Table headers
   doc
     .fontSize(10)
     .text('Treatment', 50, tableTop, { width: 200 })
     .text('Date', 260, tableTop, { width: 100 })
     .text('Cost', 380, tableTop, { width: 150, align: 'right' });
 
-  // Table line
-  doc
-    .moveTo(50, tableTop + 15)
-    .lineTo(550, tableTop + 15)
-    .stroke();
+  doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
 
-  // Table rows
+  // Treatments List
   let position = tableTop + 25;
   invoice.treatmentIds.forEach((treatment) => {
     doc
       .fontSize(10)
-      .text(treatment.treatmentType, 50, position, { width: 200 })
-      .text(new Date(treatment.treatmentDate).toLocaleDateString(), 260, position, { width: 100 })
-      .text(`$${treatment.cost.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
+      .text(treatment.treatmentType || '', 50, position, { width: 200 })
+      .text(
+        treatment.treatmentDate
+          ? new Date(treatment.treatmentDate).toLocaleDateString()
+          : '',
+        260,
+        position,
+        { width: 100 }
+      )
+      .text(`₹${treatment.cost?.toFixed(2) || '0.00'}`, 380, position, {
+        width: 150,
+        align: 'right',
+      });
 
     position += 20;
   });
 
   // Totals
   position += 20;
-  doc
-    .moveTo(350, position)
-    .lineTo(550, position)
-    .stroke();
+  doc.moveTo(350, position).lineTo(550, position).stroke();
 
   position += 10;
   doc
     .fontSize(10)
     .text('Total Amount:', 350, position)
-    .text(`$${invoice.totalAmount.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
+    .text(`₹${invoice.totalAmount.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
 
   position += 20;
   doc
     .text('Amount Paid:', 350, position)
-    .text(`$${invoice.paidAmount.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
+    .text(`₹${invoice.paidAmount.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
 
   position += 20;
   const balance = invoice.totalAmount - invoice.paidAmount;
   doc
     .fontSize(12)
     .text('Balance Due:', 350, position)
-    .text(`$${balance.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
+    .text(`₹${balance.toFixed(2)}`, 380, position, { width: 150, align: 'right' });
 
   // Notes
   if (invoice.notes) {
     position += 40;
-    doc
-      .fontSize(10)
-      .text('Notes:', 50, position)
-      .text(invoice.notes, 50, position + 15, { width: 500 });
+    doc.fontSize(10).text('Notes:', 50, position).text(invoice.notes, 50, position + 15, { width: 500 });
   }
 
   // Footer
-  doc
-    .fontSize(8)
-    .text('Thank you for your business!', 50, 700, { align: 'center', width: 500 });
+  doc.fontSize(8).text('Thank you for your business!', 50, 700, { align: 'center', width: 500 });
 
-  // Finalize PDF
+  // Finalize
   doc.end();
 };
 
-module.exports = {
-  generateInvoicePDF,
-};
+module.exports = { generateInvoicePDF };

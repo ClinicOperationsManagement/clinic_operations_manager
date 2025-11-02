@@ -13,7 +13,7 @@ router.post('/', roleMiddleware(['admin', 'receptionist']), invoiceController.cr
 router.put('/:id', roleMiddleware(['admin', 'receptionist']), invoiceController.updateInvoice);
 router.delete('/:id', roleMiddleware(['admin']), invoiceController.deleteInvoice);
 
-// PDF download
+// ✅ PDF download route
 router.get('/:id/pdf', invoiceController.downloadInvoicePDF);
 
 module.exports = router;

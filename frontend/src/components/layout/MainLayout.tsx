@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   AppBar,
@@ -38,11 +38,12 @@ import { useTheme } from '../../context/ThemeContext';
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false); // Collapsed sidebar
+  const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const drawerWidth = 240;
@@ -92,43 +93,77 @@ const MainLayout: React.FC = () => {
           </Typography>
         )}
       </Toolbar>
+
       <Divider sx={{ borderColor: mode === 'dark' ? '#333' : '#ddd' }} />
+
       <List sx={{ flexGrow: 1 }}>
-        {filteredNavItems.map(item => (
-          <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
-            <Tooltip title={collapsed ? item.text : ''} placement="right">
-              <ListItemButton
-                onClick={() => navigate(item.path)}
-                sx={{
-                  minHeight: 50,
-                  justifyContent: collapsed ? 'center' : 'initial',
-                  px: 2.5,
-                  borderRadius: 2,
-                  mb: 0.5,
-                  transition: 'all 0.2s',
-                  color: 'inherit',
-                  '&:hover': {
-                    backgroundColor: mode === 'dark' ? '#333' : '#e6f0ff',
-                    transform: 'translateX(4px)',
-                  },
-                }}
-              >
-                <ListItemIcon
+        {filteredNavItems.map(item => {
+          const isActive = location.pathname === item.path;
+
+          return (
+            <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
+              <Tooltip title={collapsed ? item.text : ''} placement="right">
+                <ListItemButton
+                  onClick={() => navigate(item.path)}
                   sx={{
-                    minWidth: 0,
-                    mr: collapsed ? 0 : 3,
-                    justifyContent: 'center',
-                    color: 'inherit',
+                    minHeight: 50,
+                    justifyContent: collapsed ? 'center' : 'initial',
+                    px: 2.5,
+                    borderRadius: 2,
+                    mb: 0.5,
+                    transition: 'all 0.2s ease',
+                    color: isActive
+                      ? mode === 'dark'
+                        ? '#fff'
+                        : '#1976d2'
+                      : 'inherit',
+                    backgroundColor: isActive
+                      ? mode === 'dark'
+                        ? '#333a55'
+                        : '#e6f0ff'
+                      : 'transparent',
+                    fontWeight: isActive ? 600 : 400,
+                    '&:hover': {
+                      backgroundColor: isActive
+                        ? mode === 'dark'
+                          ? '#3f4866'
+                          : '#dce8ff'
+                        : mode === 'dark'
+                          ? '#333'
+                          : '#e6f0ff',
+                      transform: 'translateX(4px)',
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                {!collapsed && <ListItemText primary={item.text} />}
-              </ListItemButton>
-            </Tooltip>
-          </ListItem>
-        ))}
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: collapsed ? 0 : 3,
+                      justifyContent: 'center',
+                      color: isActive
+                        ? mode === 'dark'
+                          ? '#90caf9'
+                          : '#1976d2'
+                        : 'inherit',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!collapsed && (
+                    <ListItemText
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
+          );
+        })}
       </List>
+
       <Divider sx={{ borderColor: mode === 'dark' ? '#333' : '#ddd' }} />
     </Box>
   );
@@ -136,14 +171,16 @@ const MainLayout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ zIndex: theme => theme.zIndex.drawer + 1, backgroundColor: mode === 'dark' ? '#1e1e2f' : '#1976d2', transition: 'all 0.3s' }}>
+      <AppBar
+        position="fixed"
+        sx={{
+          zIndex: theme => theme.zIndex.drawer + 1,
+          backgroundColor: mode === 'dark' ? '#1e1e2f' : '#1976d2',
+          transition: 'all 0.3s',
+        }}
+      >
         <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={() => setCollapsed(!collapsed)}
-            sx={{ mr: 2 }}
-          >
+          <IconButton color="inherit" edge="start" onClick={() => setCollapsed(!collapsed)} sx={{ mr: 2 }}>
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
@@ -157,12 +194,15 @@ const MainLayout: React.FC = () => {
           <IconButton color="inherit" onClick={handleMenuOpen}>
             <AccountCircle />
           </IconButton>
+
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
             <MenuItem disabled>
               <Typography variant="body2">{user?.name}</Typography>
             </MenuItem>
             <MenuItem disabled>
-              <Typography variant="caption" color="text.secondary">{user?.email}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user?.email}
+              </Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>

@@ -24,6 +24,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tooltip,
+  Divider,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -36,6 +39,7 @@ import { useAuth } from '../context/AuthContext';
 import type { User } from '../types';
 
 const UsersPage: React.FC = () => {
+  const theme = useTheme();
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -91,7 +95,7 @@ const UsersPage: React.FC = () => {
         name: user.name,
         role: user.role,
         phone: user.phone || '',
-        password: '', // Don't pre-fill password for security
+        password: '',
       });
     } else {
       setSelectedUser(null);
@@ -121,7 +125,6 @@ const UsersPage: React.FC = () => {
   const handleSave = async () => {
     try {
       if (selectedUser) {
-        // Update user
         const updateData: any = {
           name: formData.name,
           email: formData.email,
@@ -130,7 +133,6 @@ const UsersPage: React.FC = () => {
         };
         await userService.updateUser(selectedUser._id, updateData);
       } else {
-        // Create user (register)
         await authService.register(formData);
       }
       handleCloseModal();
@@ -169,22 +171,63 @@ const UsersPage: React.FC = () => {
   if (currentUser?.role !== 'admin') {
     return (
       <Box p={3}>
-        <Alert severity="error">Access denied. This page is only accessible to administrators.</Alert>
+        <Alert severity="error">
+          Access denied. This page is only accessible to administrators.
+        </Alert>
       </Box>
     );
   }
 
+  // 🌈 Soft gradient background adapting to theme
+  const gradientBg =
+    theme.palette.mode === 'dark'
+      ? 'linear-gradient(135deg, #1e1e2f 0%, #2d2d44 100%)'
+      : 'linear-gradient(135deg, #f9fafc 0%, #eef2f7 100%)';
+
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">User Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenModal()}
-        >
-          Add User
-        </Button>
+    <Box
+      p={3}
+      sx={{
+        minHeight: '100vh',
+        background: gradientBg,
+        backdropFilter: 'blur(10px)',
+        transition: 'background 0.5s ease',
+      }}
+    >
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
+        <Typography variant="h4" fontWeight={600}>
+          User Management
+        </Typography>
+        <Tooltip title="Add a new user">
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenModal()}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              boxShadow:
+                theme.palette.mode === 'dark'
+                  ? '0 3px 10px rgba(0,0,0,0.5)'
+                  : '0 3px 10px rgba(0,0,0,0.1)',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow:
+                  theme.palette.mode === 'dark'
+                    ? '0 4px 15px rgba(255,255,255,0.1)'
+                    : '0 4px 15px rgba(0,0,0,0.2)',
+              },
+            }}
+          >
+            Add User
+          </Button>
+        </Tooltip>
       </Box>
 
       {error && (
@@ -193,7 +236,7 @@ const UsersPage: React.FC = () => {
         </Alert>
       )}
 
-      <Box display="flex" gap={2} mb={2}>
+      <Box display="flex" gap={2} mb={3}>
         <TextField
           placeholder="Search by name or email"
           value={search}
@@ -201,7 +244,10 @@ const UsersPage: React.FC = () => {
             setSearch(e.target.value);
             setPage(0);
           }}
-          sx={{ flex: 1 }}
+          sx={{
+            flex: 1,
+            '& .MuiOutlinedInput-root': { borderRadius: 2 },
+          }}
         />
         <FormControl sx={{ minWidth: 150 }}>
           <InputLabel>Role</InputLabel>
@@ -212,6 +258,7 @@ const UsersPage: React.FC = () => {
               setPage(0);
             }}
             label="Role"
+            sx={{ borderRadius: 2 }}
           >
             <MenuItem value="">All Roles</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
@@ -227,21 +274,54 @@ const UsersPage: React.FC = () => {
         </Box>
       ) : (
         <>
-          <TableContainer component={Paper}>
+          <TableContainer
+            component={Paper}
+            sx={{
+              borderRadius: 3,
+              boxShadow:
+                theme.palette.mode === 'dark'
+                  ? '0 4px 20px rgba(255,255,255,0.05)'
+                  : '0 4px 20px rgba(0,0,0,0.08)',
+              overflow: 'hidden',
+              backgroundColor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(40,40,55,0.8)'
+                  : '#fff',
+            }}
+          >
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Phone</TableCell>
-                  <TableCell>Created Date</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                <TableRow
+                  sx={{
+                    backgroundColor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255,255,255,0.08)'
+                        : '#f5f7fa',
+                  }}
+                >
+                  <TableCell><strong>Name</strong></TableCell>
+                  <TableCell><strong>Email</strong></TableCell>
+                  <TableCell><strong>Role</strong></TableCell>
+                  <TableCell><strong>Phone</strong></TableCell>
+                  <TableCell><strong>Created Date</strong></TableCell>
+                  <TableCell align="center"><strong>Actions</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user._id}>
+                  <TableRow
+                    key={user._id}
+                    hover
+                    sx={{
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor:
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.05)'
+                            : '#f9fafb',
+                      },
+                    }}
+                  >
                     <TableCell>{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
@@ -249,29 +329,58 @@ const UsersPage: React.FC = () => {
                         label={user.role}
                         size="small"
                         color={getRoleColor(user.role)}
+                        sx={{ textTransform: 'capitalize' }}
                       />
                     </TableCell>
                     <TableCell>{user.phone || 'N/A'}</TableCell>
                     <TableCell>
-                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString()
+                        : 'N/A'}
                     </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenModal(user)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setDeleteDialogOpen(true);
-                        }}
-                        disabled={user._id === currentUser?._id}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                    <TableCell align="center">
+                      <Box display="flex" justifyContent="center" gap={1.5}>
+                        <Tooltip title="Edit User">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenModal(user)}
+                            sx={{
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.1)',
+                                backgroundColor:
+                                  theme.palette.mode === 'dark'
+                                    ? 'rgba(25,118,210,0.15)'
+                                    : 'rgba(25,118,210,0.1)',
+                              },
+                            }}
+                          >
+                            <EditIcon color="primary" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete User">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setDeleteDialogOpen(true);
+                            }}
+                            disabled={user._id === currentUser?._id}
+                            sx={{
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.1)',
+                                backgroundColor:
+                                  theme.palette.mode === 'dark'
+                                    ? 'rgba(211,47,47,0.15)'
+                                    : 'rgba(211,47,47,0.1)',
+                              },
+                            }}
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,9 +405,10 @@ const UsersPage: React.FC = () => {
 
       {/* Add/Edit User Modal */}
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, fontSize: 20 }}>
           {selectedUser ? 'Edit User' : 'Add New User'}
         </DialogTitle>
+        <Divider />
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             <TextField
@@ -343,7 +453,8 @@ const UsersPage: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <Divider />
+        <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={handleCloseModal}>Cancel</Button>
           <Button
             onClick={handleSave}
@@ -355,6 +466,11 @@ const UsersPage: React.FC = () => {
               (!selectedUser && !formData.password) ||
               (!selectedUser && formData.password.length < 8)
             }
+            sx={{
+              textTransform: 'none',
+              borderRadius: 2,
+              fontWeight: 500,
+            }}
           >
             {selectedUser ? 'Update' : 'Create'}
           </Button>
@@ -366,7 +482,7 @@ const UsersPage: React.FC = () => {
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
+            Are you sure you want to delete <b>{selectedUser?.name}</b>? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

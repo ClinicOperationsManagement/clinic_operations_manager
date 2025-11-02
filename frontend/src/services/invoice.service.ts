@@ -26,10 +26,19 @@ export const invoiceService = {
     await api.delete(`/invoices/${id}`);
   },
 
+  // ✅ Fixed downloadPDF to handle binary properly
   downloadPDF: async (id: string) => {
     const response = await api.get(`/invoices/${id}/pdf`, {
       responseType: 'blob',
     });
-    return response;
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `invoice-${id}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   },
 };

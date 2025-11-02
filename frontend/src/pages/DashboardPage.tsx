@@ -11,10 +11,11 @@ import {
 } from '@mui/material';
 import {
   People as PeopleIcon,
-  AttachMoney as MoneyIcon,
+  CurrencyRupee as RupeeIcon,
   CalendarMonth as CalendarIcon,
   Event as EventIcon,
 } from '@mui/icons-material';
+
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import type { DashboardMetrics, ApiResponse } from '../types';
@@ -149,8 +150,8 @@ const DashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Total Revenue"
-            value={`$${metrics?.totalRevenue?.toFixed(2) || '0.00'}`}
-            icon={<MoneyIcon sx={{ fontSize: 42 }} />}
+            value={`₹${metrics?.totalRevenue?.toFixed(2) || '0.00'}`}
+            icon={<RupeeIcon sx={{ fontSize: 42 }} />}
             color="success"
           />
         </Grid>

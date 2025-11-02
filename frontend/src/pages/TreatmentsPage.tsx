@@ -23,6 +23,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tooltip,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,6 +40,7 @@ import type { Treatment } from '../types';
 
 const TreatmentsPage: React.FC = () => {
   const { user } = useAuth();
+  const theme = useTheme();
 
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
@@ -52,6 +55,7 @@ const TreatmentsPage: React.FC = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null);
+
   const [formData, setFormData] = useState<any>({
     patientId: '',
     doctorId: '',
@@ -69,8 +73,6 @@ const TreatmentsPage: React.FC = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-
-      // Fetch treatments
       const treatmentsRes = await treatmentService.getTreatments({
         page: page + 1,
         limit: rowsPerPage,
@@ -78,18 +80,15 @@ const TreatmentsPage: React.FC = () => {
       setTreatments(treatmentsRes.data || []);
       setTotal(treatmentsRes.total || 0);
 
-      // Fetch patients
       const patientsRes = await patientService.getPatients({ limit: 1000 });
       setPatients(patientsRes.data || []);
 
-      // Fetch doctors
       if (user?.role === 'admin') {
         const doctorsRes = await userService.getUsers({ role: 'dentist', limit: 100 });
         setDoctors(doctorsRes.data || []);
       } else if (user?.role === 'dentist') {
         setDoctors([user]);
       }
-
       setError('');
     } catch (err: any) {
       setError(err.error || 'Failed to load data');
@@ -132,17 +131,12 @@ const TreatmentsPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const treatmentData = {
-        ...formData,
-        cost: parseFloat(formData.cost),
-      };
-
+      const treatmentData = { ...formData, cost: parseFloat(formData.cost) };
       if (selectedTreatment) {
         await treatmentService.updateTreatment(selectedTreatment._id, treatmentData);
       } else {
         await treatmentService.createTreatment(treatmentData);
       }
-
       handleCloseModal();
       fetchInitialData();
     } catch (err: any) {
@@ -171,11 +165,38 @@ const TreatmentsPage: React.FC = () => {
   const canDelete = user?.role === 'admin';
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Treatments</Typography>
+    <Box
+      p={4}
+      sx={{
+        backgroundColor: theme.palette.background.default,
+        minHeight: '100vh',
+      }}
+    >
+      {/* Header */}
+      <Box
+        mb={4}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{
+          backgroundColor: theme.palette.primary.main,
+          color: 'white',
+          borderRadius: 2,
+          p: 3,
+          boxShadow: 3,
+        }}
+      >
+        <Typography variant="h5" fontWeight="600">
+          Treatments Management
+        </Typography>
         <Button
           variant="contained"
+          sx={{
+            backgroundColor: 'white',
+            color: theme.palette.primary.main,
+            '&:hover': { backgroundColor: '#f4f4f4' },
+            fontWeight: 600,
+          }}
           startIcon={<AddIcon />}
           onClick={() => handleOpenModal()}
         >
@@ -184,62 +205,90 @@ const TreatmentsPage: React.FC = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
 
       {loading ? (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress />
+        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+          <CircularProgress size={60} />
         </Box>
       ) : (
-        <>
-          <TableContainer component={Paper}>
+        <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <TableContainer>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Patient</TableCell>
-                  <TableCell>Doctor</TableCell>
-                  <TableCell>Treatment Type</TableCell>
-                  <TableCell>Cost</TableCell>
-                  <TableCell>Disease/Condition</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
+                  {['Date', 'Patient', 'Doctor', 'Treatment Type', 'Cost', 'Disease', 'Actions'].map(
+                    (header) => (
+                      <TableCell
+                        key={header}
+                        sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          textAlign: header === 'Actions' ? 'center' : 'left',
+                        }}
+                      >
+                        {header}
+                      </TableCell>
+                    )
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {treatments.map((treatment) => (
-                  <TableRow key={treatment._id}>
-                    <TableCell>
-                      {new Date(treatment.treatmentDate).toLocaleDateString()}
-                    </TableCell>
+                  <TableRow
+                    key={treatment._id}
+                    hover
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                        transition: '0.2s',
+                      },
+                    }}
+                  >
+                    <TableCell>{new Date(treatment.treatmentDate).toLocaleDateString()}</TableCell>
                     <TableCell>
                       {typeof treatment.patientId === 'object' ? treatment.patientId.name : 'Unknown'}
                     </TableCell>
                     <TableCell>
-                      {typeof treatment.doctorId === 'object' ? `Dr. ${treatment.doctorId.name}` : 'Unknown'}
+                      {typeof treatment.doctorId === 'object'
+                        ? `Dr. ${treatment.doctorId.name}`
+                        : 'Unknown'}
                     </TableCell>
                     <TableCell>{treatment.treatmentType}</TableCell>
-                    <TableCell>${treatment.cost.toFixed(2)}</TableCell>
+                    <TableCell>
+                      ₹{treatment.cost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </TableCell>
                     <TableCell>{treatment.disease || '-'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleViewDetails(treatment)}>
-                        <ViewIcon />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleOpenModal(treatment)}>
-                        <EditIcon />
-                      </IconButton>
-                      {canDelete && (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setSelectedTreatment(treatment);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <DeleteIcon />
+
+                    {/* Centered action buttons with tooltips */}
+                    <TableCell align="center">
+                      <Tooltip title="View Details">
+                        <IconButton color="primary" onClick={() => handleViewDetails(treatment)}>
+                          <ViewIcon />
                         </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Edit Treatment">
+                        <IconButton color="secondary" onClick={() => handleOpenModal(treatment)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+
+                      {canDelete && (
+                        <Tooltip title="Delete Treatment">
+                          <IconButton
+                            color="error"
+                            onClick={() => {
+                              setSelectedTreatment(treatment);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </TableCell>
                   </TableRow>
@@ -260,22 +309,21 @@ const TreatmentsPage: React.FC = () => {
             }}
             rowsPerPageOptions={[5, 10, 25, 50]}
           />
-        </>
+        </Paper>
       )}
 
-      {/* Add/Edit Treatment Modal */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>
+      {/* Add/Edit Modal */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>
           {selectedTreatment ? 'Edit Treatment' : 'Add New Treatment'}
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <FormControl fullWidth>
               <InputLabel>Patient *</InputLabel>
               <Select
                 value={formData.patientId}
                 onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                label="Patient *"
               >
                 {patients.map((patient) => (
                   <MenuItem key={patient._id} value={patient._id}>
@@ -290,7 +338,6 @@ const TreatmentsPage: React.FC = () => {
               <Select
                 value={formData.doctorId}
                 onChange={(e) => setFormData({ ...formData, doctorId: e.target.value })}
-                label="Doctor *"
                 disabled={user?.role === 'dentist'}
               >
                 {doctors.map((doctor) => (
@@ -317,11 +364,10 @@ const TreatmentsPage: React.FC = () => {
             />
 
             <TextField
-              label="Cost *"
+              label="Cost * (₹)"
               type="number"
               value={formData.cost}
               onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-              InputProps={{ startAdornment: '$' }}
             />
 
             <TextField
@@ -339,7 +385,7 @@ const TreatmentsPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button onClick={handleCloseModal}>Cancel</Button>
           <Button
             onClick={handleSave}
@@ -351,24 +397,54 @@ const TreatmentsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* View Details Modal */}
-      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Treatment Details</DialogTitle>
-        <DialogContent>
+      {/* View Modal */}
+      <Dialog
+        open={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Treatment Details</DialogTitle>
+        <DialogContent dividers>
           {selectedTreatment && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              <Typography><strong>Patient:</strong> {typeof selectedTreatment.patientId === 'object' ? selectedTreatment.patientId.name : 'Unknown'}</Typography>
-              <Typography><strong>Doctor:</strong> {typeof selectedTreatment.doctorId === 'object' ? `Dr. ${selectedTreatment.doctorId.name}` : 'Unknown'}</Typography>
-              <Typography><strong>Treatment Type:</strong> {selectedTreatment.treatmentType}</Typography>
-              <Typography><strong>Cost:</strong> ${selectedTreatment.cost.toFixed(2)}</Typography>
-              <Typography><strong>Date:</strong> {new Date(selectedTreatment.treatmentDate).toLocaleDateString()}</Typography>
+            <Box display="flex" flexDirection="column" gap={1.5}>
+              <Typography>
+                <strong>Patient:</strong>{' '}
+                {typeof selectedTreatment.patientId === 'object'
+                  ? selectedTreatment.patientId.name
+                  : 'Unknown'}
+              </Typography>
+              <Typography>
+                <strong>Doctor:</strong>{' '}
+                {typeof selectedTreatment.doctorId === 'object'
+                  ? `Dr. ${selectedTreatment.doctorId.name}`
+                  : 'Unknown'}
+              </Typography>
+              <Typography>
+                <strong>Type:</strong> {selectedTreatment.treatmentType}
+              </Typography>
+              <Typography>
+                <strong>Cost:</strong>{' '}
+                ₹{selectedTreatment.cost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </Typography>
+              <Typography>
+                <strong>Date:</strong>{' '}
+                {new Date(selectedTreatment.treatmentDate).toLocaleDateString()}
+              </Typography>
               {selectedTreatment.disease && (
-                <Typography><strong>Disease/Condition:</strong> {selectedTreatment.disease}</Typography>
+                <Typography>
+                  <strong>Disease:</strong> {selectedTreatment.disease}
+                </Typography>
               )}
               {selectedTreatment.description && (
                 <>
-                  <Typography><strong>Description:</strong></Typography>
-                  <Typography variant="body2" color="text.secondary">{selectedTreatment.description}</Typography>
+                  <Typography>
+                    <strong>Description:</strong>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedTreatment.description}
+                  </Typography>
                 </>
               )}
             </Box>
@@ -379,13 +455,15 @@ const TreatmentsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Treatment</DialogTitle>
+      {/* Delete Confirmation */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle fontWeight={600}>Delete Treatment</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete this treatment record?
-          </Typography>
+          <Typography>Are you sure you want to delete this treatment record?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>

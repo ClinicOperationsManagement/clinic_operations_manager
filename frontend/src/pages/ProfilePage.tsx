@@ -7,16 +7,24 @@ import {
   Button,
   Typography,
   Grid,
-  Alert,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert,
+  useTheme,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/auth.service';
 import { userService } from '../services/user.service';
 
 const ProfilePage: React.FC = () => {
+  const theme = useTheme();
   const { user, logout } = useAuth();
 
+  const [open, setOpen] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -29,28 +37,38 @@ const ProfilePage: React.FC = () => {
     confirmPassword: '',
   });
 
-  const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+  const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false });
 
   const handleUpdateProfile = async () => {
     try {
       setProfileLoading(true);
-      setProfileError('');
-      setProfileSuccess('');
-
       if (user?._id) {
         await userService.updateUser(user._id, profileData);
-        setProfileSuccess('Profile updated successfully');
-
-        // Refresh user data
         await authService.getMe();
+        setSnackbar({
+          open: true,
+          message: 'Profile updated successfully!',
+          severity: 'success',
+        });
       }
+      handleClose();
     } catch (err: any) {
-      setProfileError(err.error || 'Failed to update profile');
+      setSnackbar({
+        open: true,
+        message: err.error || 'Failed to update profile',
+        severity: 'error',
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -59,134 +77,142 @@ const ProfilePage: React.FC = () => {
   const handleChangePassword = async () => {
     try {
       setPasswordLoading(true);
-      setPasswordError('');
-      setPasswordSuccess('');
 
-      // Validate passwords match
       if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setPasswordError('New passwords do not match');
+        setSnackbar({
+          open: true,
+          message: 'New passwords do not match',
+          severity: 'error',
+        });
         return;
       }
 
-      // Validate password length
       if (passwordData.newPassword.length < 8) {
-        setPasswordError('New password must be at least 8 characters');
+        setSnackbar({
+          open: true,
+          message: 'New password must be at least 8 characters',
+          severity: 'error',
+        });
         return;
       }
 
       await authService.changePassword(passwordData);
-      setPasswordSuccess('Password changed successfully. Please login again.');
+      setSnackbar({
+        open: true,
+        message: 'Password changed successfully. Logging out...',
+        severity: 'success',
+      });
 
-      // Clear password fields
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
 
-      // Logout after 2 seconds
-      setTimeout(() => {
-        logout();
-      }, 2000);
+      setTimeout(() => logout(), 2000);
     } catch (err: any) {
-      setPasswordError(err.error || 'Failed to change password');
+      setSnackbar({
+        open: true,
+        message: err.error || 'Failed to change password',
+        severity: 'error',
+      });
     } finally {
       setPasswordLoading(false);
     }
   };
 
+  const isDark = theme.palette.mode === 'dark';
+
+  const cardStyle = {
+    borderRadius: 4,
+    boxShadow: isDark
+      ? '0 6px 20px rgba(0, 0, 0, 0.6)'
+      : '0 6px 20px rgba(0, 0, 0, 0.1)',
+    background: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: isDark
+        ? '0 10px 25px rgba(80, 70, 200, 0.3)'
+        : '0 10px 25px rgba(103, 58, 183, 0.15)',
+    },
+  };
+
+  const buttonStyle = {
+    background: theme.palette.primary.main,
+    color: '#fff',
+    fontWeight: 600,
+    borderRadius: 2,
+    py: 1.2,
+    textTransform: 'none',
+    '&:hover': {
+      background: theme.palette.primary.dark,
+    },
+  };
+
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        p: 5,
+        background: theme.palette.background.default,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}
+    >
+      <Typography
+        variant="h4"
+        sx={{
+          textAlign: 'center',
+          fontWeight: 800,
+          mb: 2,
+        }}
+      >
         Profile Settings
       </Typography>
 
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        {/* Profile Information */}
+      <Grid container spacing={4} sx={{ maxWidth: 1200, mx: 'auto' }}>
+        {/* Profile Info */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={cardStyle}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 Profile Information
               </Typography>
 
-              {profileSuccess && (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  {profileSuccess}
-                </Alert>
-              )}
-
-              {profileError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {profileError}
-                </Alert>
-              )}
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <TextField
-                  label="Name"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  fullWidth
-                />
-
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  fullWidth
-                />
-
-                <TextField
-                  label="Role"
-                  value={user?.role || ''}
-                  disabled
-                  fullWidth
-                  helperText="Role cannot be changed"
-                />
-
-                <TextField
-                  label="Phone"
-                  value={profileData.phone}
-                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  fullWidth
-                />
-
-                <Button
-                  variant="contained"
-                  onClick={handleUpdateProfile}
-                  disabled={profileLoading || !profileData.name || !profileData.email}
-                  fullWidth
-                >
-                  {profileLoading ? 'Updating...' : 'Update Profile'}
-                </Button>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body1" fontWeight={600}>
+                  Name: <Typography component="span">{user?.name}</Typography>
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  Email: <Typography component="span">{user?.email}</Typography>
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  Role: <Typography component="span">{user?.role || 'User'}</Typography>
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  Phone: <Typography component="span">{user?.phone || 'N/A'}</Typography>
+                </Typography>
               </Box>
+
+              <Button sx={{ ...buttonStyle, mt: 3 }} onClick={handleOpen} fullWidth>
+                Edit Profile
+              </Button>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Change Password */}
+        {/* Password */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={cardStyle}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 Change Password
               </Typography>
 
-              {passwordSuccess && (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  {passwordSuccess}
-                </Alert>
-              )}
-
-              {passwordError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {passwordError}
-                </Alert>
-              )}
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
                 <TextField
                   label="Current Password"
                   type="password"
@@ -231,69 +257,81 @@ const ProfilePage: React.FC = () => {
                 />
 
                 <Button
-                  variant="contained"
-                  color="primary"
                   onClick={handleChangePassword}
-                  disabled={
-                    passwordLoading ||
-                    !passwordData.currentPassword ||
-                    !passwordData.newPassword ||
-                    !passwordData.confirmPassword ||
-                    passwordData.newPassword !== passwordData.confirmPassword ||
-                    passwordData.newPassword.length < 8
-                  }
+                  disabled={passwordLoading}
+                  sx={buttonStyle}
                   fullWidth
                 >
                   {passwordLoading ? 'Changing...' : 'Change Password'}
                 </Button>
 
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  textAlign="center"
+                  sx={{ color: 'text.secondary', mt: 1 }}
+                >
                   You will be logged out after changing your password.
                 </Typography>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-
-        {/* Account Information */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Account Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    User ID
-                  </Typography>
-                  <Typography variant="body1">{user?._id || 'N/A'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Account Created
-                  </Typography>
-                  <Typography variant="body1">
-                    {user?.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString()
-                      : 'N/A'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Last Updated
-                  </Typography>
-                  <Typography variant="body1">
-                    {user?.updatedAt
-                      ? new Date(user.updatedAt).toLocaleDateString()
-                      : 'N/A'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Profile</DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <TextField
+              label="Full Name"
+              value={profileData.name}
+              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={profileData.email}
+              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Phone"
+              value={profileData.phone}
+              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateProfile}
+            disabled={profileLoading}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            {profileLoading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar Toast */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

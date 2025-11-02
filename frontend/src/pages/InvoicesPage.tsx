@@ -28,21 +28,22 @@ import {
   ListItem,
   ListItemText,
   Checkbox,
+  useTheme,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Visibility as ViewIcon,
-  PictureAsPdf as PdfIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { invoiceService } from '../services/invoice.service';
 import { patientService } from '../services/patient.service';
-import { treatmentService } from '../services/treatment.service';
 import type { Invoice } from '../types';
 
 const InvoicesPage: React.FC = () => {
   const { user } = useAuth();
+  const theme = useTheme();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
@@ -60,10 +61,7 @@ const InvoicesPage: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState('');
   const [patientTreatments, setPatientTreatments] = useState<any[]>([]);
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
-  const [editFormData, setEditFormData] = useState({
-    paidAmount: '',
-    notes: '',
-  });
+  const [editFormData, setEditFormData] = useState({ paidAmount: '', notes: '' });
 
   useEffect(() => {
     fetchData();
@@ -72,11 +70,7 @@ const InvoicesPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-
-      const invoicesRes = await invoiceService.getInvoices({
-        page: page + 1,
-        limit: rowsPerPage,
-      });
+      const invoicesRes = await invoiceService.getInvoices({ page: page + 1, limit: rowsPerPage });
       setInvoices(invoicesRes.data || []);
       setTotal(invoicesRes.total || 0);
 
@@ -84,7 +78,6 @@ const InvoicesPage: React.FC = () => {
         const patientsRes = await patientService.getPatients({ limit: 1000 });
         setPatients(patientsRes.data || []);
       }
-
       setError('');
     } catch (err: any) {
       setError(err.error || 'Failed to load invoices');
@@ -96,7 +89,6 @@ const InvoicesPage: React.FC = () => {
   const handlePatientSelect = async (patientId: string) => {
     setSelectedPatient(patientId);
     setSelectedTreatments([]);
-
     try {
       const treatments = await patientService.getPatientTreatments(patientId);
       setPatientTreatments(treatments);
@@ -107,10 +99,7 @@ const InvoicesPage: React.FC = () => {
 
   const handleCreateInvoice = async () => {
     try {
-      await invoiceService.createInvoice({
-        patientId: selectedPatient,
-        treatmentIds: selectedTreatments,
-      });
+      await invoiceService.createInvoice({ patientId: selectedPatient, treatmentIds: selectedTreatments });
       setCreateModalOpen(false);
       setSelectedPatient('');
       setSelectedTreatments([]);
@@ -121,33 +110,17 @@ const InvoicesPage: React.FC = () => {
   };
 
   const handleUpdateInvoice = async () => {
-    if (selectedInvoice) {
-      try {
-        await invoiceService.updateInvoice(selectedInvoice._id, {
-          paidAmount: parseFloat(editFormData.paidAmount),
-          notes: editFormData.notes,
-        });
-        setEditModalOpen(false);
-        setSelectedInvoice(null);
-        fetchData();
-      } catch (err: any) {
-        setError(err.error || 'Failed to update invoice');
-      }
-    }
-  };
-
-  const handleDownloadPDF = async (invoiceId: string) => {
+    if (!selectedInvoice) return;
     try {
-      const blob = await invoiceService.downloadPDF(invoiceId);
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `invoice-${invoiceId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await invoiceService.updateInvoice(selectedInvoice._id, {
+        paidAmount: parseFloat(editFormData.paidAmount),
+        notes: editFormData.notes,
+      });
+      setEditModalOpen(false);
+      setSelectedInvoice(null);
+      fetchData();
     } catch (err: any) {
-      setError(err.error || 'Failed to download PDF');
+      setError(err.error || 'Failed to update invoice');
     }
   };
 
@@ -170,21 +143,47 @@ const InvoicesPage: React.FC = () => {
     setEditModalOpen(true);
   };
 
-  const getTotalAmount = () => {
-    return patientTreatments
-      .filter(t => selectedTreatments.includes(t._id))
+  const getTotalAmount = () =>
+    patientTreatments
+      .filter((t) => selectedTreatments.includes(t._id))
       .reduce((sum, t) => sum + t.cost, 0);
-  };
 
   const canCreate = user?.role === 'admin' || user?.role === 'receptionist';
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Invoices</Typography>
+    <Box
+      p={4}
+      sx={{
+        backgroundColor: theme.palette.background.default,
+        minHeight: '100vh',
+      }}
+    >
+      {/* Header */}
+      <Box
+        mb={4}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{
+          backgroundColor: theme.palette.primary.main,
+          color: 'white',
+          borderRadius: 2,
+          p: 3,
+          boxShadow: 3,
+        }}
+      >
+        <Typography variant="h5" fontWeight="600">
+          Invoices Management
+        </Typography>
         {canCreate && (
           <Button
             variant="contained"
+            sx={{
+              backgroundColor: 'white',
+              color: theme.palette.primary.main,
+              fontWeight: 600,
+              '&:hover': { backgroundColor: '#f4f4f4' },
+            }}
             startIcon={<AddIcon />}
             onClick={() => setCreateModalOpen(true)}
           >
@@ -193,67 +192,91 @@ const InvoicesPage: React.FC = () => {
         )}
       </Box>
 
+      {/* Error Message */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
 
+      {/* Table Section */}
       {loading ? (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress />
+        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+          <CircularProgress size={60} />
         </Box>
       ) : (
-        <>
-          <TableContainer component={Paper}>
+        <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <TableContainer>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>Invoice Number</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Patient</TableCell>
-                  <TableCell>Total Amount</TableCell>
-                  <TableCell>Paid Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
+                  {['Invoice No', 'Date', 'Patient', 'Total', 'Paid', 'Status', 'Actions'].map(
+                    (header) => (
+                      <TableCell
+                        key={header}
+                        sx={{ color: 'white', fontWeight: 600 }}
+                        align={header === 'Actions' ? 'center' : 'left'}
+                      >
+                        {header}
+                      </TableCell>
+                    )
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {invoices.map((invoice) => (
-                  <TableRow key={invoice._id}>
+                  <TableRow
+                    key={invoice._id}
+                    hover
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                        transition: '0.2s',
+                      },
+                    }}
+                  >
                     <TableCell>{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {new Date(invoice.issueDate).toLocaleDateString()}
+                      {typeof invoice.patientId === 'object'
+                        ? invoice.patientId.name
+                        : 'Unknown'}
                     </TableCell>
-                    <TableCell>
-                      {typeof invoice.patientId === 'object' ? invoice.patientId.name : 'Unknown'}
-                    </TableCell>
-                    <TableCell>${invoice.totalAmount.toFixed(2)}</TableCell>
-                    <TableCell>${invoice.paidAmount.toFixed(2)}</TableCell>
+                    <TableCell>₹{invoice.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell>₹{invoice.paidAmount.toFixed(2)}</TableCell>
                     <TableCell>
                       <Chip
                         label={invoice.status}
                         size="small"
                         color={
-                          invoice.status === 'paid' ? 'success' :
-                          invoice.status === 'partial' ? 'warning' :
-                          invoice.status === 'pending' ? 'default' : 'error'
+                          invoice.status === 'paid'
+                            ? 'success'
+                            : invoice.status === 'partial'
+                            ? 'warning'
+                            : 'default'
                         }
                       />
                     </TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleViewInvoice(invoice)}>
-                        <ViewIcon />
-                      </IconButton>
-                      {canCreate && (
-                        <IconButton size="small" onClick={() => handleEditInvoice(invoice)}>
-                          <EditIcon />
-                        </IconButton>
-                      )}
-                      <IconButton size="small" onClick={() => handleDownloadPDF(invoice._id)}>
-                        <PdfIcon />
-                      </IconButton>
+
+                    {/* --- Centered Action Buttons (View + Edit only) --- */}
+                    <TableCell align="center">
+                      <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
+                        <Tooltip title="View Invoice" arrow>
+                          <IconButton color="primary" onClick={() => handleViewInvoice(invoice)}>
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+
+                        {canCreate && (
+                          <Tooltip title="Edit Invoice" arrow>
+                            <IconButton color="secondary" onClick={() => handleEditInvoice(invoice)}>
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
+                    {/* -------------------------------------------- */}
                   </TableRow>
                 ))}
               </TableBody>
@@ -272,14 +295,14 @@ const InvoicesPage: React.FC = () => {
             }}
             rowsPerPageOptions={[5, 10, 25, 50]}
           />
-        </>
+        </Paper>
       )}
 
       {/* Create Invoice Modal */}
-      <Dialog open={createModalOpen} onClose={() => setCreateModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Invoice</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+      <Dialog open={createModalOpen} onClose={() => setCreateModalOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>Create New Invoice</DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="column" gap={2}>
             <FormControl fullWidth>
               <InputLabel>Select Patient *</InputLabel>
               <Select
@@ -298,39 +321,52 @@ const InvoicesPage: React.FC = () => {
             {selectedPatient && patientTreatments.length > 0 && (
               <>
                 <Typography variant="subtitle1">Select Treatments:</Typography>
-                <List sx={{ maxHeight: 300, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <List
+                  sx={{
+                    maxHeight: 300,
+                    overflow: 'auto',
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                  }}
+                >
                   {patientTreatments.map((treatment) => (
                     <ListItem
                       key={treatment._id}
                       dense
                       button
-                      onClick={() => {
-                        setSelectedTreatments(prev =>
+                      onClick={() =>
+                        setSelectedTreatments((prev) =>
                           prev.includes(treatment._id)
-                            ? prev.filter(id => id !== treatment._id)
+                            ? prev.filter((id) => id !== treatment._id)
                             : [...prev, treatment._id]
-                        );
-                      }}
+                        )
+                      }
                     >
-                      <Checkbox
-                        checked={selectedTreatments.includes(treatment._id)}
-                        edge="start"
-                      />
+                      <Checkbox checked={selectedTreatments.includes(treatment._id)} edge="start" />
                       <ListItemText
                         primary={treatment.treatmentType}
-                        secondary={`${new Date(treatment.treatmentDate).toLocaleDateString()} - $${treatment.cost.toFixed(2)}`}
+                        secondary={`${new Date(
+                          treatment.treatmentDate
+                        ).toLocaleDateString()} - ₹${treatment.cost.toFixed(2)}`}
                       />
                     </ListItem>
                   ))}
                 </List>
 
-                <Box display="flex" justifyContent="space-between" alignItems="center" p={2} bgcolor="background.default" borderRadius={1}>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  p={2}
+                  bgcolor="background.default"
+                  borderRadius={1}
+                >
                   <Typography variant="h6">Total Amount:</Typography>
-                  <Typography variant="h6">${getTotalAmount().toFixed(2)}</Typography>
+                  <Typography variant="h6">₹{getTotalAmount().toFixed(2)}</Typography>
                 </Box>
               </>
             )}
-
             {selectedPatient && patientTreatments.length === 0 && (
               <Alert severity="info">No treatments found for this patient</Alert>
             )}
@@ -339,68 +375,92 @@ const InvoicesPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setCreateModalOpen(false)}>Cancel</Button>
           <Button
-            onClick={handleCreateInvoice}
             variant="contained"
             disabled={!selectedPatient || selectedTreatments.length === 0}
+            onClick={handleCreateInvoice}
           >
             Create Invoice
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* View Invoice Modal */}
-      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Invoice Details</DialogTitle>
-        <DialogContent>
+      {/* View Modal */}
+      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>Invoice Details</DialogTitle>
+        <DialogContent dividers>
           {selectedInvoice && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
               <Typography variant="h6">{selectedInvoice.invoiceNumber}</Typography>
-              <Typography><strong>Patient:</strong> {typeof selectedInvoice.patientId === 'object' ? selectedInvoice.patientId.name : 'Unknown'}</Typography>
-              <Typography><strong>Issue Date:</strong> {new Date(selectedInvoice.issueDate).toLocaleDateString()}</Typography>
-              {selectedInvoice.dueDate && (
-                <Typography><strong>Due Date:</strong> {new Date(selectedInvoice.dueDate).toLocaleDateString()}</Typography>
-              )}
-              <Typography><strong>Status:</strong> <Chip label={selectedInvoice.status} size="small" /></Typography>
+              <Typography>
+                <strong>Patient:</strong>{' '}
+                {typeof selectedInvoice.patientId === 'object'
+                  ? selectedInvoice.patientId.name
+                  : 'Unknown'}
+              </Typography>
+              <Typography>
+                <strong>Issue Date:</strong>{' '}
+                {new Date(selectedInvoice.issueDate).toLocaleDateString()}
+              </Typography>
 
-              <Typography variant="subtitle1" sx={{ mt: 2 }}>Treatments:</Typography>
+              <Typography>
+                <strong>Status:</strong>{' '}
+                <Chip label={selectedInvoice.status} size="small" />
+              </Typography>
+
+              <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                Treatments:
+              </Typography>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Treatment Type</TableCell>
+                      <TableCell>Treatment</TableCell>
                       <TableCell>Date</TableCell>
                       <TableCell align="right">Cost</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {Array.isArray(selectedInvoice.treatmentIds) && selectedInvoice.treatmentIds.map((treatment: any, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{treatment.treatmentType || 'Unknown'}</TableCell>
-                        <TableCell>{treatment.treatmentDate ? new Date(treatment.treatmentDate).toLocaleDateString() : 'N/A'}</TableCell>
-                        <TableCell align="right">${treatment.cost?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {Array.isArray(selectedInvoice.treatmentIds) &&
+                      selectedInvoice.treatmentIds.map((treatment: any, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>{treatment.treatmentType || 'Unknown'}</TableCell>
+                          <TableCell>
+                            {treatment.treatmentDate
+                              ? new Date(treatment.treatmentDate).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell align="right">
+                            ₹{treatment.cost?.toFixed(2) || '0.00'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>
 
-              <Box display="flex" justifyContent="space-between" p={2} bgcolor="background.default" borderRadius={1} mt={2}>
-                <Typography><strong>Total Amount:</strong></Typography>
-                <Typography>${selectedInvoice.totalAmount.toFixed(2)}</Typography>
+              <Box display="flex" justifyContent="space-between" p={2} bgcolor="background.default" borderRadius={1}>
+                <Typography><strong>Total:</strong></Typography>
+                <Typography>₹{selectedInvoice.totalAmount.toFixed(2)}</Typography>
               </Box>
               <Box display="flex" justifyContent="space-between" px={2}>
-                <Typography><strong>Paid Amount:</strong></Typography>
-                <Typography>${selectedInvoice.paidAmount.toFixed(2)}</Typography>
+                <Typography><strong>Paid:</strong></Typography>
+                <Typography>₹{selectedInvoice.paidAmount.toFixed(2)}</Typography>
               </Box>
               <Box display="flex" justifyContent="space-between" px={2}>
                 <Typography><strong>Balance:</strong></Typography>
-                <Typography color="error">${(selectedInvoice.totalAmount - selectedInvoice.paidAmount).toFixed(2)}</Typography>
+                <Typography color="error">
+                  ₹{(selectedInvoice.totalAmount - selectedInvoice.paidAmount).toFixed(2)}
+                </Typography>
               </Box>
 
               {selectedInvoice.notes && (
                 <>
-                  <Typography variant="subtitle1" sx={{ mt: 2 }}>Notes:</Typography>
-                  <Typography variant="body2" color="text.secondary">{selectedInvoice.notes}</Typography>
+                  <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                    Notes:
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedInvoice.notes}
+                  </Typography>
                 </>
               )}
             </Box>
@@ -411,24 +471,22 @@ const InvoicesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Invoice Modal */}
-      <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Update Payment</DialogTitle>
-        <DialogContent>
+      {/* Edit Modal */}
+      <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>Update Payment</DialogTitle>
+        <DialogContent dividers>
           {selectedInvoice && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
               <Typography>Invoice: {selectedInvoice.invoiceNumber}</Typography>
-              <Typography>Total Amount: ${selectedInvoice.totalAmount.toFixed(2)}</Typography>
+              <Typography>Total: ₹{selectedInvoice.totalAmount.toFixed(2)}</Typography>
 
               <TextField
                 label="Paid Amount"
                 type="number"
                 value={editFormData.paidAmount}
                 onChange={(e) => setEditFormData({ ...editFormData, paidAmount: e.target.value })}
-                InputProps={{ startAdornment: '$' }}
-                helperText={`Maximum: $${selectedInvoice.totalAmount.toFixed(2)}`}
+                helperText={`Maximum: ₹${selectedInvoice.totalAmount.toFixed(2)}`}
               />
-
               <TextField
                 label="Notes"
                 multiline
@@ -444,7 +502,10 @@ const InvoicesPage: React.FC = () => {
           <Button
             onClick={handleUpdateInvoice}
             variant="contained"
-            disabled={!editFormData.paidAmount || parseFloat(editFormData.paidAmount) > (selectedInvoice?.totalAmount || 0)}
+            disabled={
+              !editFormData.paidAmount ||
+              parseFloat(editFormData.paidAmount) > (selectedInvoice?.totalAmount || 0)
+            }
           >
             Update
           </Button>

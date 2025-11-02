@@ -1,6 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const User = require('../models/User');
+console.log("MONGO_URI =", process.env.MONGO_URI);
 
 /**
  * Initialize database with default admin user
@@ -8,7 +10,7 @@ const User = require('../models/User');
 const initDatabase = async () => {
   try {
     // Connect to database
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });

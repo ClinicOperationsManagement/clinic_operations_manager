@@ -22,6 +22,7 @@ import {
   Menu,
   MenuItem,
   Chip,
+  Tooltip,
   useTheme,
 } from '@mui/material';
 import {
@@ -142,6 +143,7 @@ const PatientsPage: React.FC = () => {
 
   return (
     <Box p={3}>
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" fontWeight={700}>
           Patients
@@ -177,6 +179,7 @@ const PatientsPage: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Export menu */}
       <Menu
         anchorEl={exportAnchor}
         open={Boolean(exportAnchor)}
@@ -192,6 +195,7 @@ const PatientsPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Search */}
       <TextField
         fullWidth
         placeholder="Search patients by name, contact, or email"
@@ -203,6 +207,7 @@ const PatientsPage: React.FC = () => {
         sx={{ mb: 2, borderRadius: 2, background: theme.palette.background.paper }}
       />
 
+      {/* Table */}
       {loading ? (
         <Box display="flex" justifyContent="center" p={4}>
           <CircularProgress />
@@ -220,19 +225,23 @@ const PatientsPage: React.FC = () => {
             <Table>
               <TableHead sx={{ background: theme.palette.primary.light }}>
                 <TableRow>
-                  {['Name', 'Age', 'Gender', 'Contact', 'Email', 'Registered Date', 'Actions'].map((head) => (
-                    <TableCell
-                      key={head}
-                      sx={{
-                        fontWeight: 700,
-                        color: theme.palette.common.white,
-                      }}
-                    >
-                      {head}
-                    </TableCell>
-                  ))}
+                  {['Name', 'Age', 'Gender', 'Contact', 'Email', 'Registered Date', 'Actions'].map(
+                    (head) => (
+                      <TableCell
+                        key={head}
+                        sx={{
+                          fontWeight: 700,
+                          color: theme.palette.common.white,
+                        }}
+                        align={head === 'Actions' ? 'center' : 'left'}
+                      >
+                        {head}
+                      </TableCell>
+                    )
+                  )}
                 </TableRow>
               </TableHead>
+
               <TableBody>
                 {patients.map((patient) => (
                   <TableRow
@@ -253,29 +262,45 @@ const PatientsPage: React.FC = () => {
                     </TableCell>
                     <TableCell>{patient.contact}</TableCell>
                     <TableCell>{patient.email || 'N/A'}</TableCell>
-                    <TableCell>
-                      {new Date(patient.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" onClick={() => navigate(`/patients/${patient._id}`)}>
-                        <ViewIcon />
-                      </IconButton>
-                      {canEdit && (
-                        <IconButton size="small" onClick={() => handleOpenModal(patient)}>
-                          <EditIcon />
-                        </IconButton>
-                      )}
-                      {canDelete && (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setSelectedPatient(patient);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      )}
+                    <TableCell>{new Date(patient.createdAt).toLocaleDateString()}</TableCell>
+
+                    {/* Actions Column */}
+                    <TableCell align="center">
+                      <Box display="flex" justifyContent="center" gap={1}>
+                        <Tooltip title="View patient details" arrow>
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/patients/${patient._id}`)}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+
+                        {canEdit && (
+                          <Tooltip title="Edit patient" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenModal(patient)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {canDelete && (
+                          <Tooltip title="Delete patient" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedPatient(patient);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -299,8 +324,14 @@ const PatientsPage: React.FC = () => {
         </>
       )}
 
-      {/* Add/Edit Patient Modal */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      {/* Add/Edit Modal */}
+      <Dialog
+        open={modalOpen}
+        onClose={handleCloseModal}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
         <DialogTitle sx={{ fontWeight: 700 }}>
           {selectedPatient ? 'Edit Patient' : 'Add New Patient'}
         </DialogTitle>
@@ -312,19 +343,35 @@ const PatientsPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
+            <TextField
+              label="Contact *"
+              value={formData.contact || ''}
+              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+              required
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
             <Box display="flex" gap={2}>
               <TextField
                 label="Age"
                 type="number"
                 value={formData.age || ''}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({ ...formData, age: parseInt(e.target.value) })
+                }
                 sx={{ flex: 1 }}
               />
               <TextField
                 label="Gender"
                 select
                 value={formData.gender || ''}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value as any })
+                }
                 sx={{ flex: 1 }}
                 SelectProps={{ native: true }}
               >
@@ -334,7 +381,6 @@ const PatientsPage: React.FC = () => {
                 <option value="Other">Other</option>
               </TextField>
             </Box>
-            {/* Additional fields remain the same */}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -349,8 +395,12 @@ const PatientsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+      {/* Delete Confirmation */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
         <DialogTitle>Delete Patient</DialogTitle>
         <DialogContent>
           <Typography>
