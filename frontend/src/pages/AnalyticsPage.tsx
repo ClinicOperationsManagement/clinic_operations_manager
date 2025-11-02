@@ -153,7 +153,7 @@ const AnalyticsPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+        <LoadingStates type="spinner" size="large" text="Loading analytics..." />
       </Box>
     );
   }
@@ -169,162 +169,278 @@ const AnalyticsPage: React.FC = () => {
   const canViewAll = user?.role === 'admin' || user?.role === 'receptionist';
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Analytics & Reports
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
-        Welcome back, {user?.name}!
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* Patient Growth */}
-        <Grid item xs={12}>
-          <CardWrapper>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">Patient Growth Over Time</Typography>
-              <ToggleButtonGroup
-                value={period}
-                exclusive
-                onChange={(_, newPeriod) => newPeriod && setPeriod(newPeriod)}
+    <Box
+      sx={{
+        backgroundColor: theme.palette.background.default,
+        minHeight: '100vh',
+        p: 3,
+      }}
+    >
+      {/* Header */}
+      <AnimatedContainer animation="fadeInDown">
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="h4" fontWeight={700} gutterBottom>
+                Analytics & Reports
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Welcome back, {user?.name}! Here's your clinic's performance overview.
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={fetchAnalytics}
                 size="small"
               >
-                <ToggleButton value="daily">Daily</ToggleButton>
-                <ToggleButton value="weekly">Weekly</ToggleButton>
-                <ToggleButton value="monthly">Monthly</ToggleButton>
-              </ToggleButtonGroup>
+                Refresh
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                size="small"
+              >
+                Export
+              </Button>
             </Box>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={patientGrowth}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="count" stroke={theme.palette.primary.main} name="New Patients" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardWrapper>
-        </Grid>
+          </Box>
 
-        {/* Revenue by Treatment */}
-        <Grid item xs={12} md={6}>
-          <CardWrapper>
-            <Typography variant="h6" gutterBottom>
-              Revenue by Treatment Type
+          {/* View Mode Selector */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+              View Mode:
             </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={revenueByTreatment}
-                  dataKey="totalRevenue"
-                  nameKey="treatmentType"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={(entry) => `${entry.treatmentType}: $${entry.totalRevenue.toFixed(0)}`}
-                >
-                  {revenueByTreatment.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardWrapper>
-        </Grid>
+            <ButtonGroup size="small">
+              <Button
+                variant={viewMode === 'overview' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('overview')}
+                startIcon={<PieChartIcon />}
+              >
+                Overview
+              </Button>
+              <Button
+                variant={viewMode === 'detailed' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('detailed')}
+                startIcon={<BarChartIcon />}
+              >
+                Detailed
+              </Button>
+              <Button
+                variant={viewMode === 'trends' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('trends')}
+                startIcon={<TimelineIcon />}
+              >
+                Trends
+              </Button>
+            </ButtonGroup>
 
-        {/* Patients by Doctor */}
-        {canViewAll && (
-          <Grid item xs={12} md={6}>
-            <CardWrapper>
-              <Typography variant="h6" gutterBottom>
-                Patients by Doctor
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={patientsByDoctor}
-                    dataKey="patientCount"
-                    nameKey="doctorName"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => `Dr. ${entry.doctorName}: ${entry.patientCount}`}
-                  >
-                    {patientsByDoctor.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardWrapper>
-          </Grid>
-        )}
+            {/* Period Selector */}
+            <ToggleButtonGroup
+              value={period}
+              exclusive
+              onChange={(_, newPeriod) => newPeriod && setPeriod(newPeriod)}
+              size="small"
+              sx={{ ml: 'auto' }}
+            >
+              <ToggleButton value="daily">Daily</ToggleButton>
+              <ToggleButton value="weekly">Weekly</ToggleButton>
+              <ToggleButton value="monthly">Monthly</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </Box>
+      </AnimatedContainer>
 
-        {/* Top Diseases */}
-        {canViewAll && diseases.length > 0 && (
+      {/* Real-time KPI Dashboard */}
+      <AnimatedContainer animation="fadeInUp" sx={{ mb: 4 }}>
+        <RealtimeDashboard
+          title="Key Performance Indicators"
+          subtitle="Real-time clinic metrics"
+          widgets={kpiWidgets}
+          columns={4}
+          autoRefresh={false}
+        />
+      </AnimatedContainer>
+
+      {/* Charts Grid */}
+      {viewMode === 'overview' && (
+        <Grid container spacing={3}>
+          {/* Patient Growth Trend */}
           <Grid item xs={12}>
-            <CardWrapper>
-              <Typography variant="h6" gutterBottom>
-                Common Conditions (Top 10)
-              </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={diseases}
-                    dataKey="count"
-                    nameKey="disease"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => `${entry.disease}: ${entry.count}`}
-                  >
-                    {diseases.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardWrapper>
+            <AnimatedContainer animation="fadeInUp" animationDelay={0.1}>
+              <TrendLineChart
+                title="Patient Growth Trend"
+                subtitle="Track patient acquisition over time"
+                data={transformPatientGrowthData()}
+                height={400}
+                showArea={true}
+                showMovingAverage={true}
+                movingAveragePeriod={7}
+                showPrediction={false}
+                enableExport={true}
+              />
+            </AnimatedContainer>
           </Grid>
-        )}
 
-        {/* Summary Statistics */}
-        <Grid item xs={12}>
-          <CardWrapper>
-            <Typography variant="h6" gutterBottom>
-              Treatment Statistics
+          {/* Revenue Distribution */}
+          <Grid item xs={12} md={6}>
+            <AnimatedContainer animation="fadeInUp" animationDelay={0.2}>
+              <EnhancedPieChart
+                title="Revenue Distribution"
+                subtitle="Revenue by treatment type"
+                data={transformRevenueData()}
+                height={350}
+                showLabels={true}
+                enableExport={true}
+                animationDuration={1000}
+              />
+            </AnimatedContainer>
+          </Grid>
+
+          {/* Patient Distribution */}
+          {canViewAll && (
+            <Grid item xs={12} md={6}>
+              <AnimatedContainer animation="fadeInUp" animationDelay={0.3}>
+                <EnhancedPieChart
+                  title="Patient Distribution"
+                  subtitle="Patients by doctor"
+                  data={transformDoctorData()}
+                  height={350}
+                  showLabels={true}
+                  enableExport={true}
+                  animationDuration={1200}
+                />
+              </AnimatedContainer>
+            </Grid>
+          )}
+        </Grid>
+      )}
+
+      {viewMode === 'detailed' && (
+        <Grid container spacing={3}>
+          {/* Treatment Revenue Bar Chart */}
+          <Grid item xs={12}>
+            <AnimatedContainer animation="fadeInUp" animationDelay={0.1}>
+              <InteractiveBarChart
+                title="Treatment Revenue Analysis"
+                subtitle="Detailed breakdown of revenue by treatment type"
+                data={transformRevenueData()}
+                height={400}
+                enableBrush={true}
+                enableFilter={true}
+                enableExport={true}
+                showReferenceLines={true}
+                referenceLines={[
+                  {
+                    value: revenueByTreatment.reduce((sum, item) => sum + item.totalRevenue, 0) / revenueByTreatment.length,
+                    label: 'Average',
+                    color: theme.palette.warning.main,
+                    strokeDasharray: '5 5',
+                  },
+                ]}
+              />
+            </AnimatedContainer>
+          </Grid>
+
+          {/* Common Conditions */}
+          {canViewAll && diseases.length > 0 && (
+            <Grid item xs={12}>
+              <AnimatedContainer animation="fadeInUp" animationDelay={0.2}>
+                <InteractiveBarChart
+                  title="Common Conditions"
+                  subtitle="Top 10 most frequently diagnosed conditions"
+                  data={transformDiseaseData()}
+                  height={350}
+                  enableExport={true}
+                />
+              </AnimatedContainer>
+            </Grid>
+          )}
+        </Grid>
+      )}
+
+      {viewMode === 'trends' && (
+        <Grid container spacing={3}>
+          {/* Patient Growth with Predictions */}
+          <Grid item xs={12}>
+            <AnimatedContainer animation="fadeInUp" animationDelay={0.1}>
+              <TrendLineChart
+                title="Patient Growth Forecast"
+                subtitle="Historical data with 30-day prediction"
+                data={transformPatientGrowthData()}
+                height={400}
+                showPrediction={true}
+                predictionDays={30}
+                confidenceInterval={true}
+                showTrendLine={true}
+                showMovingAverage={true}
+                movingAveragePeriod={14}
+                enableExport={true}
+              />
+            </AnimatedContainer>
+          </Grid>
+
+          {/* Treatment Trends */}
+          <Grid item xs={12}>
+            <AnimatedContainer animation="fadeInUp" animationDelay={0.2}>
+              <TrendLineChart
+                title="Treatment Trends Analysis"
+                subtitle="Compare treatment popularity over time"
+                data={transformPatientGrowthData()}
+                height={350}
+                showComparison={true}
+                enableExport={true}
+              />
+            </AnimatedContainer>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Treatment Statistics Cards */}
+      <AnimatedContainer animation="fadeInUp" animationDelay={0.4} sx={{ mt: 4 }}>
+        <EnhancedCard gradient="primary" gradientOpacity={0.1}>
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
+              Treatment Performance Metrics
             </Typography>
             <Grid container spacing={2}>
               {revenueByTreatment.map((treatment, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Box
-                    p={2}
-                    borderRadius={2}
-                    sx={{
-                      bgcolor: theme.palette.background.paper,
-                      boxShadow: 2,
-                      transition: 'transform 0.2s',
-                      '&:hover': { transform: 'translateY(-3px)', boxShadow: 4 },
-                    }}
-                  >
-                    <Typography variant="subtitle2">{treatment.treatmentType}</Typography>
-                    <Typography variant="h6" color="primary">
-                      ${treatment.totalRevenue.toFixed(2)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {treatment.count} treatments
-                    </Typography>
-                  </Box>
+                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                  <AnimatedContainer animation="fadeInUp" animationDelay={0.5 + index * 0.1}>
+                    <EnhancedCard
+                      hoverEffect="lift"
+                      sx={{
+                        p: 2,
+                        textAlign: 'center',
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+                      }}
+                    >
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                        {treatment.treatmentType}
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700} color="primary.main">
+                        ${treatment.totalRevenue.toFixed(0)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {treatment.count} treatments
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        <Chip
+                          label={`Avg: $${(treatment.totalRevenue / treatment.count).toFixed(0)}`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </Box>
+                    </EnhancedCard>
+                  </AnimatedContainer>
                 </Grid>
               ))}
             </Grid>
-          </CardWrapper>
-        </Grid>
-      </Grid>
+          </Box>
+        </EnhancedCard>
+      </AnimatedContainer>
     </Box>
   );
 };
