@@ -63,6 +63,7 @@ const MainLayout: React.FC = () => {
     { text: 'Appointments', icon: <CalendarIcon />, path: '/appointments', roles: ['admin', 'dentist', 'receptionist'] },
     { text: 'Treatments', icon: <TreatmentIcon />, path: '/treatments', roles: ['admin', 'dentist'] },
     { text: 'Invoices', icon: <ReceiptIcon />, path: '/invoices', roles: ['admin', 'dentist', 'receptionist'] },
+    { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory', roles: ['admin', 'receptionist'] },
     { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics', roles: ['admin', 'receptionist'] },
     { text: 'Users', icon: <ManageAccountsIcon />, path: '/users', roles: ['admin'] },
   ];
