@@ -14,6 +14,7 @@ const treatmentRoutes = require('./routes/treatment.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
 const fileRoutes = require('./routes/file.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
 
 // Initialize Express app
 const app = express();
