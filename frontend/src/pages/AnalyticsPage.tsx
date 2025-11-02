@@ -45,6 +45,7 @@ const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'trends'>('overview');
 
   useEffect(() => {
     fetchAnalytics();
@@ -76,20 +77,78 @@ const AnalyticsPage: React.FC = () => {
     }
   };
 
-  const CardWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <Card
-      sx={{
-        height: '100%',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: 6,
-        },
-      }}
-    >
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
+  // Transform data for enhanced charts
+  const transformPatientGrowthData = () => {
+    return patientGrowth.map(item => ({
+      ...item,
+      date: new Date(item.date).toLocaleDateString(),
+    }));
+  };
+
+  const transformRevenueData = () => {
+    return revenueByTreatment.map(item => ({
+      name: item.treatmentType,
+      value: item.totalRevenue,
+      description: `${item.count} treatments`,
+      percentage: (item.totalRevenue / revenueByTreatment.reduce((sum, r) => sum + r.totalRevenue, 0)) * 100,
+    }));
+  };
+
+  const transformDoctorData = () => {
+    return patientsByDoctor.map(item => ({
+      name: `Dr. ${item.doctorName}`,
+      value: item.patientCount,
+      description: `${item.patientCount} patients`,
+    }));
+  };
+
+  const transformDiseaseData = () => {
+    return diseases.map(item => ({
+      name: item.disease,
+      value: item.count,
+      description: `${item.count} cases`,
+    }));
+  };
+
+  // KPI data for real-time dashboard
+  const kpiWidgets = [
+    {
+      id: 'total-revenue',
+      title: 'Total Revenue',
+      type: 'kpi' as const,
+      value: revenueByTreatment.reduce((sum, item) => sum + item.totalRevenue, 0),
+      format: 'currency' as const,
+      trend: 'up' as const,
+      unit: '',
+    },
+    {
+      id: 'total-patients',
+      title: 'Total Patients',
+      type: 'kpi' as const,
+      value: patientGrowth.reduce((sum, item) => sum + item.count, 0),
+      format: 'number' as const,
+      trend: 'up' as const,
+    },
+    {
+      id: 'treatments',
+      title: 'Total Treatments',
+      type: 'kpi' as const,
+      value: revenueByTreatment.reduce((sum, item) => sum + item.count, 0),
+      format: 'number' as const,
+      trend: 'stable' as const,
+    },
+    {
+      id: 'avg-revenue',
+      title: 'Avg. Revenue per Patient',
+      type: 'kpi' as const,
+      value: revenueByTreatment.length > 0
+        ? revenueByTreatment.reduce((sum, item) => sum + item.totalRevenue, 0) /
+          revenueByTreatment.reduce((sum, item) => sum + item.count, 0)
+        : 0,
+      format: 'currency' as const,
+      trend: 'up' as const,
+    },
+  ];
 
   if (loading) {
     return (
